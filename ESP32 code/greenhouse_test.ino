@@ -1,5 +1,12 @@
 #include <ArduinoJson.h>
 #include <DHT.h>
+#include <Preferences.h>
+//#include <WiFi.h>
+
+Preferences preferences;
+
+//const char* ssid = "Etisalat-4Y9S";
+//const char* password = "A2KUKe6k";
 
 // --- القنوات والأسلاك (نفس ترتيبك) ---
 const int soil_sensors[] = {36, 39, 34}; //A --->36:vp
@@ -43,7 +50,7 @@ unsigned long targetMillis = 0;
 unsigned long lastUpdateMillis = 0;      
 unsigned long dayResetMillis = 0;
 
-int currentGroup = 0;
+int currentGroup = 1;
 int currentSoilGroup[3] = {0, 0, 0};
 
 const unsigned long ONE_DAY_MILLIS = 86400000; // 24 ساعة بالمللي ثانية
@@ -52,10 +59,26 @@ const unsigned long ONE_DAY_MILLIS = 86400000; // 24 ساعة بالمللي ث�
 DHT dht(temp_sensor_pin, DHT22);
 
 
-
-
 void setup() {
   Serial.begin(9600); // ده اللي هيروح للـ Raspberry Pi عبر الكابل
+
+  // --- EEPROM "greenhouse" ---
+  preferences.begin("greenhouse", false);           // "greenhouse" هو اسم المساحة في الذاكرة، false يعني قراءة وكتابة
+  currentGroup = preferences.getInt("group", 1);    // اقرأ الجروب، ولو الذاكرة فاضية (أول مرة تشغل الكود) خليه 1
+
+  // --- wifi ---
+  /*
+  Serial.println("Connecting to WiFi...");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED){
+    delay(50);
+    Serial.println(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected!");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+  */
   dht.begin();
   
   for(int i=0 ; i<3; i++) pinMode(valves[i], OUTPUT);
@@ -130,7 +153,7 @@ void loop() {
 
   // LDR:
   current_LDR = analogRead(LDR_sensor_pin);
-  float currentPercentage = (current_LDR / 4095.0) * 100.0;
+  currentPercentage = (current_LDR / 4095.0) * 100.0;
   LDR_control(currentGroup, currentPercentage, deltaTime);
 
 
@@ -262,7 +285,9 @@ void LDR_control(int group, float currentPct, unsigned long delta) {
     targetMillis = 30000; 
   } else if (group == 2) {
     targetMillis = 60000; 
-  }
+  } /*else {
+    targetMillis = 30000;
+  }*/
 
   if (totalEffectiveMillis < targetMillis) {    
     if (currentPct < 66.0) {
@@ -274,7 +299,7 @@ void LDR_control(int group, float currentPct, unsigned long delta) {
       light_state = false;
     }
     
-    totalEffectiveMillis += delta; 
+    totalEffectiveMillis += delta;
     
   } 
   else {
@@ -312,10 +337,13 @@ void processSerialData() {
 
         if (groupStr == "group1") {
           currentGroup = 1;
+          preferences.putInt("group", 1);
         } else if (groupStr == "group2") {
           currentGroup = 2;
+          preferences.putInt("group", 2);
         } else if (groupStr == "group3") {
           currentGroup = 3;
+          preferences.putInt("group", 3);
         }
 
         JsonObject pots = doc["farming"]["pots"];
