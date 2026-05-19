@@ -9,17 +9,17 @@ Preferences preferences;
 //const char* password = "A2KUKe6k";
 
 // --- القنوات والأسلاك (نفس ترتيبك) ---
-const int soil_sensors[] = {36, 39, 34}; //A --->36:vp
-const int valves[] = {33, 25, 26}; //D
+const int soil_sensors[] = {34, 39, 36}; //A --->SN:39 & SP:36
+const int valves[] = {26, 25, 33}; //D
 const int pump_pin = 27; //D
-const int fans[] = {14, 12}; //D
-const int heater = 13; //D
+const int fans[] = {12, 13}; //D
+const int heater = 14; //D
 const int temp_sensor_pin = 19; //D
 const int motion_sensor = 23; //D
 const int ultasonic_circuit_pin = 22; //D
 const int LDR_sensor_pin = 32; //A
 const int light_pin = 21; //D
-const int camera_light_pin = 16; //D
+//const int camera_light_pin = 16; //D
 
 // --- المتغيرات العامة (عشان الـ JSON يشوفها) ---
 int sensorValues[3];
@@ -139,10 +139,10 @@ void loop() {
   }
 
   if (any_valve_open) {
-    digitalWrite(pump_pin, HIGH);
+    digitalWrite(pump_pin, LOW);
     pump_state = true;
   } else {
-    digitalWrite(pump_pin, LOW);
+    digitalWrite(pump_pin, HIGH);
     pump_state = false;
   }
 
@@ -192,11 +192,11 @@ void soil_control(int index, int group, float current_perc) {
   }
 
   if(current_perc >= min_dry && current_perc <= max_dry) {
-    digitalWrite(valves[index], HIGH);
+    digitalWrite(valves[index], LOW);
     valves_state[index] = true;
   }
   else if (current_perc >= min_wet && current_perc <= max_wet) {
-    digitalWrite(valves[index], LOW);
+    digitalWrite(valves[index], HIGH);
     valves_state[index] = false;
   }
 }
@@ -206,6 +206,15 @@ void soil_control(int index, int group, float current_perc) {
 
 // --- temp sensor---
 void temp_control(float val, int group) {
+  if (isnan(val)) {
+    digitalWrite(heater, HIGH);
+    digitalWrite(fans[0], HIGH);
+    digitalWrite(fans[1], HIGH);
+    fans_state = false;
+    heater_state = false;
+    return; // اخرج من الدالة هنا خلاص
+  }
+
   float min_temp, max_temp;
 
   // تحديد النطاق بناءً على الجدول
@@ -231,25 +240,25 @@ void temp_control(float val, int group) {
   // منطق التحكم
   if (val > max_temp) {
     // حرارة عالية: نشغل المروح ونقفل السخان
-    digitalWrite(heater, LOW);
-    digitalWrite(fans[0], HIGH);
-    digitalWrite(fans[1], HIGH);
+    digitalWrite(heater, HIGH);
+    digitalWrite(fans[0], LOW);
+    digitalWrite(fans[1], LOW);
     fans_state = true;
     heater_state = false;
   }
   else if (val < min_temp) {
     // حرارة منخفضة: نشغل السخان ونقفل المروح
-    digitalWrite(heater, HIGH);
-    digitalWrite(fans[0], LOW);
-    digitalWrite(fans[1], LOW);
+    digitalWrite(heater, LOW);
+    digitalWrite(fans[0], HIGH);
+    digitalWrite(fans[1], HIGH);
     fans_state = false;
     heater_state = true;
   }
   else {
     // الحرارة مثالية (داخل النطاق): نقفل كل حاجة
-    digitalWrite(heater, LOW);
-    digitalWrite(fans[0], LOW);
-    digitalWrite(fans[1], LOW);
+    digitalWrite(heater, HIGH);
+    digitalWrite(fans[0], HIGH);
+    digitalWrite(fans[1], HIGH);
     fans_state = false;
     heater_state = false;
   }
@@ -261,7 +270,7 @@ void temp_control(float val, int group) {
 // --- motion sensor ---
 void motion_control(){
   if(digitalRead(motion_sensor) == HIGH){
-    digitalWrite(ultasonic_circuit_pin, HIGH);
+    digitalWrite(ultasonic_circuit_pin, LOW);
     motion_state = true;
     motionStartTime = millis();
   }
@@ -270,7 +279,7 @@ void motion_control(){
     unsigned long currentMillis = millis();
     
     if (currentMillis - motionStartTime >= duration) {
-      digitalWrite(ultasonic_circuit_pin, LOW);
+      digitalWrite(ultasonic_circuit_pin, HIGH);
       motion_state = false;
     }
   }
@@ -290,12 +299,12 @@ void LDR_control(int group, float currentPct, unsigned long delta) {
   }*/
 
   if (totalEffectiveMillis < targetMillis) {    
-    if (currentPct < 66.0) {
-      digitalWrite(light_pin, HIGH); // محتاجين نور صناعي
+    if (currentPct < 63.0) {
+      digitalWrite(light_pin, LOW); // محتاجين نور صناعي
       light_state = true;
     }
-    else {
-      digitalWrite(light_pin, LOW);  // النور الطبيعي كفاية
+    else if (currentPct > 68.0) {
+      digitalWrite(light_pin, HIGH);  // النور الطبيعي كفاية
       light_state = false;
     }
     
@@ -303,7 +312,7 @@ void LDR_control(int group, float currentPct, unsigned long delta) {
     
   } 
   else {
-    digitalWrite(light_pin, LOW);
+    digitalWrite(light_pin, HIGH);
     light_state = false;
   }
 }
@@ -363,9 +372,9 @@ void processSerialData() {
         }
         
         if (lightState == "on") {
-          digitalWrite(camera_light_pin, HIGH);
+          digitalWrite(light_pin, LOW);
         } else {
-          digitalWrite(camera_light_pin, LOW);
+          digitalWrite(light_pin, HIGH);
         }
 
       }
