@@ -88,7 +88,7 @@ void setup() {
   pinMode(motion_sensor, INPUT);
   pinMode(ultasonic_circuit_pin, OUTPUT);
   pinMode(light_pin, OUTPUT);
-  pinMode(camera_light_pin, OUTPUT);
+  //pinMode(camera_light_pin, OUTPUT);
 
   lastUpdateMillis = millis();
   dayResetMillis = millis();
@@ -228,7 +228,7 @@ void temp_control(float val, int group) {
       max_temp = 24.0;
       break;
     case 3:
-      min_temp = 20.0;
+      min_temp = 26.0;
       max_temp = 30.0;
       break;
     default: // حالة احتياطية لو الرقم غلط
@@ -290,30 +290,30 @@ void motion_control(){
 
 // --- LDR sensor ---
 void LDR_control(int group, float currentPct, unsigned long delta) {
+  // لو البايثون باعت أمر تشغيل إجباري، اخرج من الدالة وسيب البن زي ما هو
+  if (light_state == true) { 
+    return; 
+  }
+
   if (group == 1 || group == 3) {
     targetMillis = 30000; 
   } else if (group == 2) {
     targetMillis = 60000; 
-  } /*else {
-    targetMillis = 30000;
-  }*/
+  }
 
   if (totalEffectiveMillis < targetMillis) {    
     if (currentPct < 63.0) {
-      digitalWrite(light_pin, LOW); // محتاجين نور صناعي
-      light_state = true;
+      digitalWrite(light_pin, LOW); 
+      // light_state = true; <-- شيلنا دي عشان متعملش بلوك دائم، الـ LDR بيتحكم في البن بس
     }
     else if (currentPct > 68.0) {
-      digitalWrite(light_pin, HIGH);  // النور الطبيعي كفاية
-      light_state = false;
+      digitalWrite(light_pin, HIGH);  
+      // light_state = false;
     }
-    
     totalEffectiveMillis += delta;
-    
   } 
   else {
     digitalWrite(light_pin, HIGH);
-    light_state = false;
   }
 }
 
@@ -373,8 +373,10 @@ void processSerialData() {
         
         if (lightState == "on") {
           digitalWrite(light_pin, LOW);
+          light_state = true; // نرفع العلم إن التشغيل يدوي ثابت
         } else {
           digitalWrite(light_pin, HIGH);
+          light_state = false; // نقفل العلم عشان الـ LDR يرجع ياخد التحكم لو عاوز
         }
 
       }
