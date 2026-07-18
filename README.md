@@ -3,6 +3,7 @@ An automated Smart Greenhouse system powered by Raspberry Pi 5 and ESP32. It fea
 
 - [Circuit Diagram](https://app.cirkitdesigner.com/project/183696b8-9d27-4965-9932-9f019460da95)
 - [Documentation](https://drive.google.com/drive/folders/1LKRL6lX4Qb8MC_fYuJ-SylBiDjAKcroz?usp=drive_link)
+- [Dataset](https://www.kaggle.com/datasets/ironwolf437/plant-disease-detection-dataset/data)
 
 ---
 
